@@ -29,36 +29,89 @@ function SignupForm() {
     }));
   };
 
-  const handleOnSubmit = async (e) => {
-    e.preventDefault();
-
-    if (password !== confirmPassword) {
-      Alert.alert("Passwords Do Not Match");
+  const handleOnSubmit = async () => {
+    // Basic validation
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
-    // Demo API Call
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match");
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert("Error", "Password must be at least 6 characters long");
+      return;
+    }
+
     try {
+      console.log('Making API call to:', `${BASE_URL}/api/v1/auth/signup`);
+      const requestData = {
+        firstName,
+        lastName,
+        email,
+        password,
+        confirmPassword,
+        accountType,
+      };
+      console.log('With data:', requestData);
+
       const response = await fetch(`${BASE_URL}/api/v1/auth/signup`, {
         method: 'POST',
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          firstName,
-          lastName,
-          email,
-          password,
-          confirmPassword,
-          accountType,
-        }),
+        body: JSON.stringify(requestData),
       });
 
+      console.log('Response status:', response.status);
       const result = await response.json();
-      console.log("result ", result)
-      Alert.alert('Account Created', `Response: ${JSON.stringify(result)}`);
+      console.log('Response data:', result);
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to create account');
+      }
+
+      if (result.token) {
+        // Successfully created account and got token
+        Alert.alert(
+          'Success', 
+          'Account created successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Here you would typically navigate to the login screen
+                // or store the token and navigate to the main app
+                console.log('Success, token received:', result.token);
+              }
+            }
+          ]
+        );
+      } else {
+        throw new Error('No token received from server');
+      }
+      
     } catch (error) {
-      Alert.alert('Error', 'Failed to create account');
+      console.error('Signup error details:', {
+        message: error.message,
+        stack: error.stack,
+      });
+      
+      if (error.message.includes('Network request failed')) {
+        Alert.alert(
+          'Network Error',
+          'Please check your internet connection and try again. If the problem persists, the server might be temporarily unavailable.'
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          error.message || 'Failed to create account. Please try again.'
+        );
+      }
     }
   };
 

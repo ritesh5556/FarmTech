@@ -29,41 +29,86 @@ export default function LoginPage() {
   };
 
   const handleLogin = async () => {
-    if (email && password) {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+
+    try {
+      console.log('Attempting login to:', `${BASE_URL}/api/v1/auth/login`);
+      console.log('With email:', email);
+
+      const response = await fetch(`${BASE_URL}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password,
+        }),
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
+      // First get the raw text to see what we're receiving
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+
+      let result;
       try {
-        Alert.alert('Login Attempt', `Attempting to login with email: ${email}`);
-        console.log("LOgin -> ", BASE_URL);
-
-        const response = await fetch(`${BASE_URL}/api/v1/auth/login`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: email,
-            password: password,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-          Alert.alert('Success', 'Login successful!');
-          
-          if (result.token) {
-            await storeToken(result.token);
-          }
-
-          navigation.navigate('Success');
-        } else {
-          Alert.alert('Error', result.message || 'Invalid login credentials');
-        }
-      } catch (error) {
-        Alert.alert('Error', 'Failed to login. Please try again.');
-        console.error('Login error:', error);
+        // Try to parse as JSON
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('JSON Parse Error:', parseError);
+        throw new Error(`Server returned invalid JSON: ${responseText.substring(0, 100)}...`);
       }
-    } else {
-      Alert.alert('Error', 'Please enter your email and password');
+
+      if (response.ok) {
+        if (result.token) {
+          await storeToken(result.token);
+          Alert.alert(
+            'Success', 
+            'Login successful!',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  navigation.navigate('Success');
+                }
+              }
+            ]
+          );
+        } else {
+          throw new Error('No token received from server');
+        }
+      } else {
+        throw new Error(result.message || 'Invalid login credentials');
+      }
+    } catch (error) {
+      console.error('Login error details:', {
+        message: error.message,
+        stack: error.stack,
+      });
+      
+      if (error.message.includes('Network request failed')) {
+        Alert.alert(
+          'Network Error',
+          'Please check your internet connection and try again. If the problem persists, the server might be temporarily unavailable.'
+        );
+      } else if (error.message.includes('Server returned invalid JSON')) {
+        Alert.alert(
+          'Server Error',
+          'The server returned an invalid response. Please try again later.'
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          error.message || 'Failed to login. Please try again.'
+        );
+      }
     }
   };
 

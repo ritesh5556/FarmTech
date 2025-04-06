@@ -20,7 +20,7 @@ export default function HomePage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <NavBar />
+      {/* <NavBar /> */}
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Leaf size={32} color="#4CAF50" />

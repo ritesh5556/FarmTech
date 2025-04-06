@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TextInput, Alert, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { launchCamera } from 'react-native-image-picker';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from "@env";
-import { Camera, Leaf, Send, Info } from 'lucide-react-native';
+import { Camera, Leaf, Send, Info, Image as ImageIcon } from 'lucide-react-native';
 
 const CameraPage = ({ navigation }) => {
   const [photoUri, setPhotoUri] = useState(null);
@@ -29,9 +29,27 @@ const CameraPage = ({ navigation }) => {
     });
   };
 
+  const handleSelectFromGallery = () => {
+    const options = {
+      mediaType: 'photo',
+      quality: 1,
+    };
+
+    launchImageLibrary(options, (response) => {
+      if (response.didCancel) {
+        Alert.alert('Cancelled', 'You cancelled image selection');
+      } else if (response.errorCode) {
+        Alert.alert('Error', response.errorMessage);
+      } else {
+        const { uri } = response.assets[0];
+        setPhotoUri(uri);
+      }
+    });
+  };
+
   const handleSave = async () => {
     if (!photoUri || !description) {
-      Alert.alert('Incomplete', 'Please take a photo and add a description');
+      Alert.alert('Incomplete', 'Please take a photo or select one from your gallery and add a description');
       return;
     }
 
@@ -92,7 +110,7 @@ const CameraPage = ({ navigation }) => {
         <View style={styles.infoBox}>
           <Info size={20} color="#4CAF50" />
           <Text style={styles.infoText}>
-            Take a clear photo of your crop and add a brief description. This helps our AI analyze your crop's health more accurately.
+            Take a clear photo of your crop or select one from your gallery. Add a brief description to help our AI analyze your crop's health.
           </Text>
         </View>
 
@@ -101,14 +119,21 @@ const CameraPage = ({ navigation }) => {
         ) : (
           <View style={styles.placeholderImage}>
             <Camera size={48} color="#4CAF50" />
-            <Text style={styles.placeholderText}>No photo taken yet</Text>
+            <Text style={styles.placeholderText}>No photo selected yet</Text>
           </View>
         )}
 
-        <TouchableOpacity style={styles.cameraButton} onPress={handleLaunchCamera}>
-          <Camera size={24} color="#FFFFFF" />
-          <Text style={styles.buttonText}>Take Photo</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.cameraButton} onPress={handleLaunchCamera}>
+            <Camera size={24} color="#FFFFFF" />
+            <Text style={styles.buttonText}>Take Photo</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.galleryButton} onPress={handleSelectFromGallery}>
+            <ImageIcon size={24} color="#FFFFFF" />
+            <Text style={styles.buttonText}>Choose from Gallery</Text>
+          </TouchableOpacity>
+        </View>
 
         <TextInput
           style={styles.input}
@@ -192,6 +217,11 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     fontSize: 16,
   },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
   cameraButton: {
     backgroundColor: '#4CAF50',
     flexDirection: 'row',
@@ -199,7 +229,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 12,
     borderRadius: 8,
-    marginBottom: 20,
+    flex: 1,
+    marginRight: 10,
+  },
+  galleryButton: {
+    backgroundColor: '#2196F3',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 10,
   },
   buttonText: {
     color: '#FFFFFF',
